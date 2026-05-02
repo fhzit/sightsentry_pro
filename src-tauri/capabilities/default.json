@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "identifier": "default",
+  "description": "Capability for the main window",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "core:window:default",
+    "core:window:allow-close",
+    "core:window:allow-minimize",
+    "core:window:allow-maximize",
+    "core:window:allow-unmaximize",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-title",
+    "serial:default",
+    "serial:allow-open",
+    "serial:allow-read",
+    "serial:allow-write",
+    "serial:allow-close",
+    "serial:allow-list",
+    "serial:allow-pending",
+    "serial:allow-output",
+    "serial:allow-input",
+    "bluetooth:default",
+    "bluetooth:allow-is-available",
+    "bluetooth:allow-request-device",
+    "bluetooth:allow-bluetooth-event-listeners"
+  ]
+}
