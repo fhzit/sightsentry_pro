@@ -66,19 +66,25 @@ jobs:
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > src-tauri/local.properties
 
-      - name: Restore keystore
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      - name: Restore keystore (if provided)
         run: |
-          echo "Restoring keystore"
-          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > src-tauri/release.keystore
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then
+            echo "No keystore secret provided; skipping keystore restore"
+          else
+            echo "Restoring keystore"
+            echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > src-tauri/release.keystore
+          fi
 
-      - name: Export signing env
-        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+      - name: Export signing env (if keystore restored)
         run: |
-          echo "RELEASE_STORE_FILE=$GITHUB_WORKSPACE/src-tauri/release.keystore" >> $GITHUB_ENV
-          echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
-          echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
-          echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          if [ -f src-tauri/release.keystore ]; then
+            echo "RELEASE_STORE_FILE=$GITHUB_WORKSPACE/src-tauri/release.keystore" >> $GITHUB_ENV
+            echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+            echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+            echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+          else
+            echo "Keystore not found; skipping export of signing env vars"
+          fi
 
       - name: Install Gradle 8.2
         run: |
