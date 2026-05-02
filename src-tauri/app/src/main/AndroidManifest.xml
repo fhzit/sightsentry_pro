@@ -2,7 +2,7 @@
 
     <application
         android:label="sightsentry-pro"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@android:drawable/ic_dialog_info">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
