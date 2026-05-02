@@ -154,3 +154,5 @@ npm run tauri:build
 ## 许可证
 
 MIT License
+
+Trigger CI: 触发 Android 构建测试（自动提交）
