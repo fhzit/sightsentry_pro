@@ -3,6 +3,7 @@ apply plugin: 'kotlin-android'
 
 android {
     compileSdkVersion 34
+    namespace 'com.sightsentry.pro'
 
     defaultConfig {
         applicationId "com.sightsentry.pro"
