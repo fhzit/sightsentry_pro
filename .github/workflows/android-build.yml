@@ -66,6 +66,20 @@ jobs:
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > src-tauri/local.properties
 
+      - name: Restore keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "Restoring keystore"
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > src-tauri/release.keystore
+
+      - name: Export signing env
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
+        run: |
+          echo "RELEASE_STORE_FILE=$GITHUB_WORKSPACE/src-tauri/release.keystore" >> $GITHUB_ENV
+          echo "RELEASE_STORE_PASSWORD=${{ secrets.KEYSTORE_PASSWORD }}" >> $GITHUB_ENV
+          echo "RELEASE_KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> $GITHUB_ENV
+          echo "RELEASE_KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> $GITHUB_ENV
+
       - name: Install Gradle 8.2
         run: |
           wget https://services.gradle.org/distributions/gradle-8.2-bin.zip -P /tmp
