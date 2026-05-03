@@ -1,10 +1,11 @@
 package com.sightsentry.pro
 
 import android.os.Bundle
-import tauri.activity.TauriActivity
+import androidx.appcompat.app.AppCompatActivity
 
-class MainActivity : TauriActivity() {
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        setContentView(R.layout.activity_main)
     }
 }
