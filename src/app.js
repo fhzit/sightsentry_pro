@@ -1009,7 +1009,40 @@ const platform = detectPlatform();
 if (platform === 'tauri') {
     setupTauriWindowControls();
 } else if (platform === 'android') {
-    // Android-specific initialization can go here
+    setupAndroidBridge();
 } else {
-    // Web-specific initialization can go here
+    // Web-specific initialization
+}
+
+function setupAndroidBridge() {
+    document.querySelectorAll('#minimizeBtn, #maximizeBtn, #closeBtn').forEach(btn => {
+        btn.style.display = 'none';
+    });
+
+    if (window.__nativeBridge) {
+        const info = JSON.parse(window.__nativeBridge.getNativeInfo());
+        console.log('Android native bridge ready:', info);
+        logDebug('Android native bridge initialized');
+    } else {
+        console.warn('Native bridge not available - running in limited mode');
+        logDebug('Native bridge unavailable');
+    }
+}
+
+function callNative(action, params = {}) {
+    if (!window.__nativeBridge) {
+        return Promise.reject(new Error('Native bridge not available'));
+    }
+
+    const message = JSON.stringify({ action, ...params });
+    try {
+        const responseStr = window.__nativeBridge.callNative(message);
+        const response = JSON.parse(responseStr);
+        if (response.error) {
+            return Promise.reject(new Error(response.error));
+        }
+        return Promise.resolve(response.result || response);
+    } catch (e) {
+        return Promise.reject(e);
+    }
 }

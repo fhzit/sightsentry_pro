@@ -1,11 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
+
+#[cfg(not(target_os = "android"))]
 use tauri::{AppHandle, Manager, State};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_serial::{SerialPort, SerialPortInfo};
+#[cfg(not(target_os = "android"))]
 use tauri_plugin_bluetooth::BluetoothManager;
 
 pub struct SerialState {
     pub port: Mutex<Option<Box<dyn SerialPort>>>,
+}
+
+#[cfg(target_os = "android")]
+pub struct SerialState {
+    pub port: Mutex<Option<()>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -14,6 +23,7 @@ pub struct SerialPortInfoDto {
     pub port_type: String,
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn get_serial_ports() -> Result<Vec<SerialPortInfoDto>, String> {
     log::info!("Getting serial ports...");
@@ -27,6 +37,7 @@ pub async fn get_serial_ports() -> Result<Vec<SerialPortInfoDto>, String> {
         .collect())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn connect_serial(
     app: AppHandle,
@@ -39,6 +50,7 @@ pub async fn connect_serial(
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn disconnect_serial(state: State<'_, SerialState>) -> Result<(), String> {
     log::info!("Disconnecting serial port");
@@ -49,6 +61,7 @@ pub async fn disconnect_serial(state: State<'_, SerialState>) -> Result<(), Stri
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn read_serial_data(state: State<'_, SerialState>) -> Result<String, String> {
     let port = state.port.lock().unwrap();
@@ -61,6 +74,7 @@ pub async fn read_serial_data(state: State<'_, SerialState>) -> Result<String, S
     }
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn write_serial_data(state: State<'_, SerialState>, data: String) -> Result<(), String> {
     let port = state.port.lock().unwrap();
@@ -72,6 +86,7 @@ pub async fn write_serial_data(state: State<'_, SerialState>, data: String) -> R
     }
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn scan_bluetooth() -> Result<Vec<String>, String> {
     log::info!("Scanning for Bluetooth devices...");
@@ -80,6 +95,7 @@ pub async fn scan_bluetooth() -> Result<Vec<String>, String> {
     Ok(devices.into_iter().map(|d| d.name).collect())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn connect_bluetooth(device_name: String) -> Result<(), String> {
     log::info!("Connecting to Bluetooth device: {}", device_name);
@@ -88,6 +104,7 @@ pub async fn connect_bluetooth(device_name: String) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg(not(target_os = "android"))]
 #[tauri::command]
 pub async fn disconnect_bluetooth(device_name: String) -> Result<(), String> {
     log::info!("Disconnecting Bluetooth device: {}", device_name);
