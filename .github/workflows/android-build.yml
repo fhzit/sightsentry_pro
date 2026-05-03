@@ -28,11 +28,11 @@ jobs:
           toolchain: stable
           profile: minimal
 
-      - name: Setup Java 17
+      - name: Setup Java 11
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '11'
 
       - name: Install Android commandline tools and SDK packages
         run: |
