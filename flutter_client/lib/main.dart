@@ -81,9 +81,9 @@ class _HomePageState extends State<HomePage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const _TitleBar(),
+                        _TitleBar(controller: controller),
                         const SizedBox(height: 18),
-                        _SegmentedConnection(controller: controller),
+                        _SignalFilterBar(controller: controller),
                         const SizedBox(height: 16),
                         _StatusCard(controller: controller),
                         const SizedBox(height: 22),
@@ -116,28 +116,33 @@ class _HomePageState extends State<HomePage> {
 }
 
 class _TitleBar extends StatelessWidget {
-  const _TitleBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Row(
-      children: [
-        Text('SightSentry Pro', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primaryText)),
-        Spacer(),
-        Icon(Icons.sensors_rounded, color: AppColors.blue, size: 28),
-      ],
-    );
-  }
-}
-
-class _SegmentedConnection extends StatelessWidget {
-  const _SegmentedConnection({required this.controller});
+  const _TitleBar({required this.controller});
 
   final SentryController controller;
 
   @override
   Widget build(BuildContext context) {
-    final active = controller.status.kind;
+    return Row(
+      children: [
+        const Text('SightSentry Pro', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800, color: AppColors.primaryText)),
+        const Spacer(),
+        IconButton(
+          tooltip: '设置',
+          onPressed: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => SettingsPage(controller: controller))),
+          icon: const Icon(Icons.settings_rounded, color: AppColors.blue, size: 28),
+        ),
+      ],
+    );
+  }
+}
+
+class _SignalFilterBar extends StatelessWidget {
+  const _SignalFilterBar({required this.controller});
+
+  final SentryController controller;
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
       height: 88,
       padding: const EdgeInsets.all(7),
@@ -146,19 +151,21 @@ class _SegmentedConnection extends StatelessWidget {
         children: [
           Expanded(
             child: _SegmentButton(
-              active: active == ConnectionKind.usb,
-              icon: Icons.usb_rounded,
-              label: 'OTG',
-              onTap: controller.connectUsb,
+              active: controller.filter == 'wifi',
+              icon: Icons.wifi_rounded,
+              label: 'WiFi',
+              count: controller.wifiCount,
+              onTap: () => controller.setFilter(controller.filter == 'wifi' ? 'all' : 'wifi'),
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
             child: _SegmentButton(
-              active: active == ConnectionKind.ble,
+              active: controller.filter == 'ble',
               icon: Icons.bluetooth_rounded,
-              label: 'Bluetooth',
-              onTap: controller.connectBle,
+              label: '蓝牙',
+              count: controller.bleCount,
+              onTap: () => controller.setFilter(controller.filter == 'ble' ? 'all' : 'ble'),
             ),
           ),
         ],
@@ -168,12 +175,13 @@ class _SegmentedConnection extends StatelessWidget {
 }
 
 class _SegmentButton extends StatelessWidget {
-  const _SegmentButton({required this.active, required this.icon, required this.label, required this.onTap});
+  const _SegmentButton({required this.active, required this.icon, required this.label, required this.onTap, this.count});
 
   final bool active;
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final int? count;
 
   @override
   Widget build(BuildContext context) {
@@ -188,10 +196,106 @@ class _SegmentButton extends StatelessWidget {
           children: [
             Icon(icon, color: active ? AppColors.blue : AppColors.secondaryText, size: 28),
             const SizedBox(height: 6),
-            Text(label, style: TextStyle(color: active ? AppColors.blue : AppColors.secondaryText, fontWeight: FontWeight.w700)),
+            Text(count == null ? label : '$label · $count', style: TextStyle(color: active ? AppColors.blue : AppColors.secondaryText, fontWeight: FontWeight.w700)),
           ],
         ),
       ),
+    );
+  }
+}
+
+class SettingsPage extends StatelessWidget {
+  const SettingsPage({super.key, required this.controller});
+
+  final SentryController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      builder: (context, _) {
+        return Scaffold(
+          body: SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(18, 10, 18, 28),
+              children: [
+                Row(children: [
+                  IconButton(onPressed: () => Navigator.pop(context), icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primaryText)),
+                  const Expanded(child: Center(child: Text('设置', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.primaryText)))),
+                  const SizedBox(width: 48),
+                ]),
+                const SizedBox(height: 20),
+                const Text('连接方式', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.primaryText)),
+                const SizedBox(height: 10),
+                _SettingsCard(children: [
+                  _ConnectionOption(
+                    icon: Icons.usb_rounded,
+                    title: 'USB OTG',
+                    subtitle: controller.status.kind == ConnectionKind.usb ? controller.status.label : '通过 USB 串口连接 ESP32 节点',
+                    active: controller.status.kind == ConnectionKind.usb,
+                    onTap: controller.connectUsb,
+                  ),
+                  const Divider(height: 1, color: AppColors.divider, indent: 60),
+                  _ConnectionOption(
+                    icon: Icons.bluetooth_rounded,
+                    title: '蓝牙 BLE',
+                    subtitle: controller.status.kind == ConnectionKind.ble ? controller.status.label : '通过 BLE UART 连接 SightSentry 节点',
+                    active: controller.status.kind == ConnectionKind.ble,
+                    onTap: controller.connectBle,
+                  ),
+                ]),
+                const SizedBox(height: 22),
+                const Text('设备显示', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: AppColors.primaryText)),
+                const SizedBox(height: 10),
+                _SettingsCard(children: [
+                  SwitchListTile.adaptive(
+                    value: controller.personalDevicesOnly,
+                    onChanged: controller.setPersonalDevicesOnly,
+                    activeColor: AppColors.blue,
+                    title: const Text('只显示手机/平板/手表/耳机', style: TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.w700)),
+                    subtitle: const Text('隐藏无法识别为个人终端的设备', style: TextStyle(color: AppColors.secondaryText)),
+                  ),
+                ]),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(color: AppColors.card, borderRadius: BorderRadius.circular(18)),
+      child: Column(children: children),
+    );
+  }
+}
+
+class _ConnectionOption extends StatelessWidget {
+  const _ConnectionOption({required this.icon, required this.title, required this.subtitle, required this.active, required this.onTap});
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool active;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: active ? AppColors.blue : AppColors.secondaryText),
+      title: Text(title, style: TextStyle(color: active ? AppColors.blue : AppColors.primaryText, fontWeight: FontWeight.w800)),
+      subtitle: Text(subtitle, style: const TextStyle(color: AppColors.secondaryText)),
+      trailing: active ? const Icon(Icons.check_circle_rounded, color: AppColors.green) : const Icon(Icons.chevron_right_rounded, color: AppColors.secondaryText),
     );
   }
 }
@@ -289,18 +393,20 @@ class _DeviceRow extends StatelessWidget {
         child: Row(
           children: [
             _DeviceGlyph(type: device.type),
-            const SizedBox(width: 14),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                 Row(children: [
-                  Flexible(child: Text(device.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.primaryText))),
+                  Expanded(child: Text(device.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.primaryText))),
                   if (device.type == SignalType.ble) const _LeBadge(),
                 ]),
                 const SizedBox(height: 4),
-                Text(device.mac.toLowerCase(), style: const TextStyle(color: AppColors.secondaryText, fontSize: 13)),
+                Text('${device.vendor} · ${device.categoryLabel}', maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
+                const SizedBox(height: 2),
+                Text(device.mac.toLowerCase(), style: const TextStyle(color: AppColors.secondaryText, fontSize: 12)),
               ]),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 6),
             Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
               Text('${device.rssi} dBm', style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w800)),
               const SizedBox(height: 5),
@@ -343,6 +449,7 @@ class DeviceDetailPage extends StatelessWidget {
             _InfoCard(rows: [
               _InfoRow('MAC', device.mac),
               _InfoRow('制造商', device.vendor),
+              _InfoRow('设备类别', device.categoryLabel),
               _InfoRow('节点', '节点 ${device.nodeId}'),
             ]),
             const SizedBox(height: 24),

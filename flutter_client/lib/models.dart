@@ -1,57 +1,21 @@
 import 'dart:math' as math;
 
+import 'oui_vendors.dart';
+
 enum SignalType { wifi, ble }
 
-const Map<String, String> ouiVendors = {
+enum DeviceCategory { phone, tablet, watch, headphone, other }
+
+const Map<String, String> manualOuiVendors = {
   '00:1A:2B': 'Intel',
-  '00:1E:8C': 'Apple',
-  '00:21:CC': 'Apple',
-  '00:23:12': 'Apple',
-  '00:23:DF': 'Apple',
-  '00:26:08': 'Apple',
-  '00:26:BB': 'Apple',
   '00:30:65': 'Cisco',
   '00:40:96': 'Cisco',
-  '0C:17:73': 'Huawei',
-  '18:00:20': 'Apple',
-  '28:63:36': 'Apple',
-  '30:23:03': 'Apple',
-  '34:15:9E': 'Apple',
-  '38:2C:4A': 'Apple',
-  '40:B0:34': 'Apple',
-  '44:39:C4': 'Apple',
-  '50:28:73': 'Huawei',
-  '58:55:CA': 'Apple',
-  '5C:AA:FD': 'Apple',
-  '60:14:5C': 'Samsung',
-  '64:B9:E8': 'Apple',
-  '68:5B:35': 'Apple',
-  '70:56:81': 'Apple',
-  '78:CA:39': 'Apple',
-  '7C:6D:62': 'Apple',
-  '80:2A:A8': 'Apple',
-  '84:38:35': 'Apple',
-  '88:1F:A1': 'Samsung',
-  '90:27:E4': 'Apple',
-  '94:10:3B': 'Samsung',
-  '98:01:A7': 'Apple',
-  'A0:88:B4': 'Apple',
-  'A4:5E:60': 'Apple',
-  'AC:DE:48': 'Apple',
-  'B4:99:4C': 'Apple',
-  'BC:17:BB': 'Samsung',
-  'C0:EE:FB': 'Apple',
-  'C4:2C:03': 'Apple',
-  'C8:2A:14': 'Apple',
-  'D0:23:DB': 'Apple',
-  'D4:9A:20': 'Apple',
-  'DC:4A:3E': 'Apple',
-  'E0:98:06': 'Apple',
-  'E4:95:6E': 'Apple',
-  'EC:35:86': 'Apple',
-  'F0:18:98': 'Apple',
-  'F4:5C:89': 'Apple',
-  'FC:86:2A': 'Huawei',
+  '5C:AA:FD': 'Apple, Inc.',
+  '60:14:5C': 'Samsung Electronics Co.,Ltd',
+  '88:1F:A1': 'Samsung Electronics Co.,Ltd',
+  '94:10:3B': 'Samsung Electronics Co.,Ltd',
+  'BC:17:BB': 'Samsung Electronics Co.,Ltd',
+  'FC:86:2A': 'HUAWEI TECHNOLOGIES CO.,LTD',
 };
 
 class SentryDevice {
@@ -75,9 +39,12 @@ class SentryDevice {
 
   String get id => '${type.name}:$mac';
   String get title => name.isNotEmpty ? name : vendor;
-  String get vendor => identifyVendor(mac, fallback: type == SignalType.ble ? 'Bluetooth LE 设备' : '通用');
+  String get vendor => identifyVendor(mac, fallback: type == SignalType.ble ? 'Bluetooth LE 设备' : '未知厂商');
   String get typeLabel => type == SignalType.ble ? 'Bluetooth LE' : 'WiFi';
-  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'WIFI';
+  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'WiFi';
+  DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type);
+  String get categoryLabel => deviceCategoryLabel(category);
+  bool get isPersonalDevice => category != DeviceCategory.other;
   double get distanceMeters => estimateDistanceMeters(rssi);
 
   SentryDevice copyWithSample({
@@ -161,7 +128,44 @@ String identifyVendor(String mac, {String fallback = '未知厂商'}) {
   final normalized = normalizeMac(mac);
   if (normalized.length < 8) return fallback;
   final prefix = normalized.substring(0, 8);
-  return ouiVendors[prefix] ?? fallback;
+  return manualOuiVendors[prefix] ?? ieeeOuiVendors[prefix] ?? fallback;
+}
+
+DeviceCategory inferDeviceCategory({required String name, required String vendor, required SignalType type}) {
+  final haystack = '$name $vendor'.toLowerCase();
+  if (_containsAny(haystack, const ['watch', 'band', 'bracelet', 'amazfit', 'garmin', 'fitbit'])) {
+    return DeviceCategory.watch;
+  }
+  if (_containsAny(haystack, const ['airpods', 'buds', 'headphone', 'headset', 'earphone', 'earbud', 'beats', 'bose', 'jabra', 'sennheiser', 'jbl', 'soundcore'])) {
+    return DeviceCategory.headphone;
+  }
+  if (_containsAny(haystack, const ['ipad', 'tablet', 'pad ', ' tab', 'galaxy tab', 'matepad', 'lenovo tab'])) {
+    return DeviceCategory.tablet;
+  }
+  if (_containsAny(haystack, const ['iphone', 'phone', 'pixel', 'galaxy', 'huawei', 'honor', 'xiaomi', 'redmi', 'oppo', 'oneplus', 'vivo', 'realme', 'motorola', 'nokia', 'sony', 'zte', 'meizu', 'nothing'])) {
+    return DeviceCategory.phone;
+  }
+  if (_containsAny(haystack, const ['apple, inc.', 'samsung electronics', 'google', 'lg electronics'])) {
+    return type == SignalType.ble ? DeviceCategory.watch : DeviceCategory.phone;
+  }
+  return DeviceCategory.other;
+}
+
+bool _containsAny(String value, List<String> needles) => needles.any(value.contains);
+
+String deviceCategoryLabel(DeviceCategory category) {
+  switch (category) {
+    case DeviceCategory.phone:
+      return '手机';
+    case DeviceCategory.tablet:
+      return '平板';
+    case DeviceCategory.watch:
+      return '手表';
+    case DeviceCategory.headphone:
+      return '耳机';
+    case DeviceCategory.other:
+      return '其他';
+  }
 }
 
 double estimateDistanceMeters(int rssi, {double exponent = 2.5, int rssiAtOneMeter = -59}) {
