@@ -255,6 +255,17 @@ class SettingsPage extends StatelessWidget {
                     title: const Text('只显示手机/平板/手表/耳机', style: TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.w700)),
                     subtitle: const Text('隐藏无法识别为个人终端的设备', style: TextStyle(color: AppColors.secondaryText)),
                   ),
+                  const Divider(height: 1, color: AppColors.divider, indent: 16),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 18),
+                    child: SwitchListTile.adaptive(
+                      value: controller.personalDevicesOnlyBleOnly,
+                      onChanged: controller.personalDevicesOnly ? controller.setPersonalDevicesOnlyBleOnly : null,
+                      activeThumbColor: AppColors.blue,
+                      title: const Text('仅对蓝牙生效', style: TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.w700)),
+                      subtitle: const Text('开启后 WiFi 设备不受上方筛选限制', style: TextStyle(color: AppColors.secondaryText)),
+                    ),
+                  ),
                 ]),
               ],
             ),

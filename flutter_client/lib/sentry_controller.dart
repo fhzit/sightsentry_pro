@@ -31,6 +31,7 @@ class SentryController extends ChangeNotifier {
   ConnectionStatus _status = ConnectionStatus.idle;
   String _filter = 'all';
   bool _personalDevicesOnly = false;
+  bool _personalDevicesOnlyBleOnly = false;
 
   SentryController() {
     _expiryTimer = Timer.periodic(const Duration(seconds: 2), (_) => pruneExpired());
@@ -38,7 +39,8 @@ class SentryController extends ChangeNotifier {
 
   List<SentryDevice> get devices {
     final list = _devices.values.where((device) {
-      if (_personalDevicesOnly && !device.isPersonalDevice) return false;
+      if (_personalDevicesOnly && !_personalDevicesOnlyBleOnly && !device.isPersonalDevice) return false;
+      if (_personalDevicesOnly && _personalDevicesOnlyBleOnly && device.type == SignalType.ble && !device.isPersonalDevice) return false;
       if (_filter == 'wifi') return device.type == SignalType.wifi;
       if (_filter == 'ble') return device.type == SignalType.ble;
       return true;
@@ -52,6 +54,7 @@ class SentryController extends ChangeNotifier {
   ConnectionStatus get status => _status;
   String get filter => _filter;
   bool get personalDevicesOnly => _personalDevicesOnly;
+  bool get personalDevicesOnlyBleOnly => _personalDevicesOnlyBleOnly;
   int get wifiCount => _devices.values.where((d) => d.type == SignalType.wifi).length;
   int get bleCount => _devices.values.where((d) => d.type == SignalType.ble).length;
 
@@ -62,6 +65,11 @@ class SentryController extends ChangeNotifier {
 
   void setPersonalDevicesOnly(bool value) {
     _personalDevicesOnly = value;
+    notifyListeners();
+  }
+
+  void setPersonalDevicesOnlyBleOnly(bool value) {
+    _personalDevicesOnlyBleOnly = value;
     notifyListeners();
   }
 
