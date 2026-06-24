@@ -26,6 +26,7 @@ class SentryDevice {
     required this.type,
     required this.lastSeen,
     this.name = '',
+    this.rawType = '',
     Map<int, int>? nodeRssi,
   }) : nodeRssi = nodeRssi ?? {nodeId: rssi};
 
@@ -34,6 +35,7 @@ class SentryDevice {
   final int rssi;
   final SignalType type;
   final String name;
+  final String rawType;
   final DateTime lastSeen;
   final Map<int, int> nodeRssi;
 
@@ -41,8 +43,9 @@ class SentryDevice {
   String get title => name.isNotEmpty ? name : vendor;
   String get vendor => identifyVendor(mac, fallback: type == SignalType.ble ? 'Bluetooth LE 设备' : '未知厂商');
   String get typeLabel => type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Probe Request';
-  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'Probe';
+  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'WiFi';
   String get sourceLabel => type == SignalType.ble ? 'BLE 广播' : 'Probe Request';
+  bool get usesLegacyWifiType => type == SignalType.wifi && !rawType.toUpperCase().contains('PROBE');
   DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type);
   String get categoryLabel => deviceCategoryLabel(category);
   bool get isPersonalDevice => category != DeviceCategory.other;
@@ -62,6 +65,7 @@ class SentryDevice {
       rssi: smoothed,
       type: type,
       name: (name != null && name.isNotEmpty) ? name : this.name,
+      rawType: rawType,
       lastSeen: now,
       nodeRssi: updatedNodeRssi,
     );
@@ -75,6 +79,7 @@ class SentryFrame {
     required this.rssi,
     required this.type,
     this.name = '',
+    this.rawType = '',
   });
 
   final int nodeId;
@@ -82,6 +87,7 @@ class SentryFrame {
   final int rssi;
   final SignalType type;
   final String name;
+  final String rawType;
 
   String get id => '${type.name}:$mac';
 
@@ -114,8 +120,9 @@ class SentryFrame {
     }
 
     if (!_macLike(mac)) return null;
-    final type = typeText.toUpperCase().contains('BLE') ? SignalType.ble : SignalType.wifi;
-    return SentryFrame(nodeId: nodeId, mac: mac, rssi: rssi, type: type, name: name);
+    final rawType = typeText.toUpperCase();
+    final type = rawType.contains('BLE') ? SignalType.ble : SignalType.wifi;
+    return SentryFrame(nodeId: nodeId, mac: mac, rssi: rssi, type: type, name: name, rawType: rawType);
   }
 
   static bool _macLike(String value) {

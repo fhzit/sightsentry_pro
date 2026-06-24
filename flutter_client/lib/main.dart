@@ -460,7 +460,7 @@ class DeviceDetailPage extends StatelessWidget {
             _InfoCard(rows: [
               _InfoRow('MAC', device.mac),
               _InfoRow('制造商', device.vendor),
-              _InfoRow('识别来源', device.sourceLabel),
+              _InfoRow('识别来源', device.usesLegacyWifiType ? '${device.sourceLabel}（兼容 WIFI）' : device.sourceLabel),
               _InfoRow('设备类别', device.categoryLabel),
               _InfoRow('节点', '节点 ${device.nodeId}'),
             ]),

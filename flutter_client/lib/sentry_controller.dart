@@ -237,6 +237,7 @@ class SentryController extends ChangeNotifier {
         rssi: frame.rssi,
         type: frame.type,
         name: frame.name,
+        rawType: frame.rawType,
         lastSeen: now,
       );
     } else {
