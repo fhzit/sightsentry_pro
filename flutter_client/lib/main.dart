@@ -251,7 +251,7 @@ class SettingsPage extends StatelessWidget {
                   SwitchListTile.adaptive(
                     value: controller.personalDevicesOnly,
                     onChanged: controller.setPersonalDevicesOnly,
-                    activeColor: AppColors.blue,
+                    activeThumbColor: AppColors.blue,
                     title: const Text('只显示手机/平板/手表/耳机', style: TextStyle(color: AppColors.primaryText, fontWeight: FontWeight.w700)),
                     subtitle: const Text('隐藏无法识别为个人终端的设备', style: TextStyle(color: AppColors.secondaryText)),
                   ),
