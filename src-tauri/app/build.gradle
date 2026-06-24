@@ -5,6 +5,10 @@ android {
     compileSdkVersion 34
     namespace 'com.sightsentry.pro'
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId "com.sightsentry.pro"
         minSdkVersion 28
