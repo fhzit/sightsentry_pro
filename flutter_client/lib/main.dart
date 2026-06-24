@@ -460,6 +460,7 @@ class DeviceDetailPage extends StatelessWidget {
             _InfoCard(rows: [
               _InfoRow('MAC', device.mac),
               _InfoRow('制造商', device.vendor),
+              _InfoRow('识别来源', device.sourceLabel),
               _InfoRow('设备类别', device.categoryLabel),
               _InfoRow('节点', '节点 ${device.nodeId}'),
             ]),
@@ -471,7 +472,7 @@ class DeviceDetailPage extends StatelessWidget {
             _InfoCard(rows: [
               _InfoRow('测算距离', formatDistance(device.distanceMeters)),
               _InfoRow('信号强度', '${device.rssi} dBm'),
-              _InfoRow(device.type == SignalType.ble ? '蓝牙类型' : '无线类型', device.type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Management Frame'),
+              _InfoRow(device.type == SignalType.ble ? '蓝牙类型' : '无线类型', device.type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Probe Request'),
             ]),
           ],
         ),

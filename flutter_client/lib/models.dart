@@ -40,8 +40,9 @@ class SentryDevice {
   String get id => '${type.name}:$mac';
   String get title => name.isNotEmpty ? name : vendor;
   String get vendor => identifyVendor(mac, fallback: type == SignalType.ble ? 'Bluetooth LE 设备' : '未知厂商');
-  String get typeLabel => type == SignalType.ble ? 'Bluetooth LE' : 'WiFi';
-  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'WiFi';
+  String get typeLabel => type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Probe Request';
+  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'Probe';
+  String get sourceLabel => type == SignalType.ble ? 'BLE 广播' : 'Probe Request';
   DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type);
   String get categoryLabel => deviceCategoryLabel(category);
   bool get isPersonalDevice => category != DeviceCategory.other;

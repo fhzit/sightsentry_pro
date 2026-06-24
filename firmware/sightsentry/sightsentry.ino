@@ -61,7 +61,7 @@ void filterDevices();
 void startBLEServer();
 void macToString(const uint8_t mac[6], char out[18]);
 void sanitizeOutput(char* value);
-bool parseWifiMgmtSourceMac(const uint8_t* payload, uint8_t out[6]);
+bool parseWifiProbeRequestSourceMac(const uint8_t* payload, uint8_t out[6]);
 void handleModeButton();
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
@@ -141,7 +141,7 @@ void setup() {
     const uint8_t* payload = pkt->payload;
 
     DeviceEvent event = {};
-    if (!parseWifiMgmtSourceMac(payload, event.mac)) {
+    if (!parseWifiProbeRequestSourceMac(payload, event.mac)) {
       return;
     }
 
@@ -316,17 +316,19 @@ void addOrUpdateDevice(const DeviceEvent& event) {
   xSemaphoreGive(devicesMutex);
 }
 
-bool parseWifiMgmtSourceMac(const uint8_t* payload, uint8_t out[6]) {
+bool parseWifiProbeRequestSourceMac(const uint8_t* payload, uint8_t out[6]) {
   if (!payload) {
     return false;
   }
 
   uint16_t frameCtrl = payload[0] | (payload[1] << 8);
   uint8_t type = (frameCtrl >> 2) & 0x03;
-  if (type != 0) {
+  uint8_t subtype = (frameCtrl >> 4) & 0x0F;
+  if (type != 0 || subtype != 4) {
     return false;
   }
 
+  // Probe Request source address is Address 2 in the 802.11 MAC header.
   memcpy(out, payload + 10, 6);
   return true;
 }
@@ -369,7 +371,7 @@ void sendData() {
   char line[128];
   for (size_t i = 0; i < snapshotCount; ++i) {
     const DeviceInfo& dev = snapshot[i];
-    const char* typeStr = (dev.type == DEV_WIFI) ? "WIFI" : "BLE";
+    const char* typeStr = (dev.type == DEV_WIFI) ? "WIFI_PROBE" : "BLE";
     int len = snprintf(line, sizeof(line), "%u|%s|%d|%s|%s\n",
       NODE_ID, dev.mac, dev.rssi, typeStr, dev.name);
     if (len > 0 && len < (int)sizeof(line)) {
