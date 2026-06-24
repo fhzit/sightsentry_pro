@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Match common USB CDC/serial devices. User can still grant manually for other VID/PID. -->
+    <usb-device class="2" />
+    <usb-device vendor-id="6790" /> <!-- CH340/CH341 -->
+    <usb-device vendor-id="4292" /> <!-- CP210x -->
+    <usb-device vendor-id="1027" /> <!-- FTDI -->
+    <usb-device vendor-id="9025" /> <!-- Arduino -->
+    <usb-device vendor-id="12346" /> <!-- Espressif -->
+</resources>
