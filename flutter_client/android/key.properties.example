@@ -1,0 +1,7 @@
+# Copy this file to flutter_client/android/key.properties for local release signing.
+# The GitHub Actions workflow writes flutter_client/android/key.properties from repository secrets.
+
+storeFile=release-keystore.jks
+storePassword=your-keystore-password
+keyAlias=your-key-alias
+keyPassword=your-key-password
