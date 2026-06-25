@@ -238,10 +238,21 @@ class SentryController extends ChangeNotifier {
         type: frame.type,
         name: frame.name,
         rawType: frame.rawType,
+        manufacturerData: frame.manufacturerData,
+        serviceUuids: frame.serviceUuids,
+        txPower: frame.txPower,
         lastSeen: now,
       );
     } else {
-      _devices[frame.id] = current.copyWithSample(nodeId: frame.nodeId, rssi: frame.rssi, now: now, name: frame.name);
+      _devices[frame.id] = current.copyWithSample(
+        nodeId: frame.nodeId,
+        rssi: frame.rssi,
+        now: now,
+        name: frame.name,
+        manufacturerData: frame.manufacturerData,
+        serviceUuids: frame.serviceUuids,
+        txPower: frame.txPower,
+      );
     }
     notifyListeners();
   }

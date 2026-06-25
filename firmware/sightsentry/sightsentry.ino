@@ -3,6 +3,7 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 #include <cstring>
+#include <string>
 
 #define NODE_ID 1
 #define SCAN_INTERVAL_MS 1000
@@ -32,6 +33,9 @@ struct DeviceInfo {
   int rssi;
   DeviceType type;
   char name[32];
+  char manufacturerData[65];
+  char serviceUuids[96];
+  int txPower;
   unsigned long lastSeen;
 };
 
@@ -40,6 +44,9 @@ struct DeviceEvent {
   int rssi;
   DeviceType type;
   char name[32];
+  char manufacturerData[65];
+  char serviceUuids[96];
+  int txPower;
 };
 
 DeviceInfo devices[MAX_DEVICE_COUNT];
@@ -61,6 +68,7 @@ void filterDevices();
 void startBLEServer();
 void macToString(const uint8_t mac[6], char out[18]);
 void sanitizeOutput(char* value);
+void bytesToHex(const std::string& bytes, char* out, size_t outSize);
 bool parseWifiProbeRequestSourceMac(const uint8_t* payload, uint8_t out[6]);
 void handleModeButton();
 
@@ -83,6 +91,20 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
     } else {
       event.name[0] = '\0';
     }
+    if (advertisedDevice.haveManufacturerData()) {
+      bytesToHex(advertisedDevice.getManufacturerData(), event.manufacturerData, sizeof(event.manufacturerData));
+    } else {
+      event.manufacturerData[0] = '\0';
+    }
+    if (advertisedDevice.haveServiceUUID()) {
+      std::string serviceUuid = advertisedDevice.getServiceUUID().toString();
+      strncpy(event.serviceUuids, serviceUuid.c_str(), sizeof(event.serviceUuids) - 1);
+      event.serviceUuids[sizeof(event.serviceUuids) - 1] = '\0';
+      sanitizeOutput(event.serviceUuids);
+    } else {
+      event.serviceUuids[0] = '\0';
+    }
+    event.txPower = advertisedDevice.haveTXPower() ? advertisedDevice.getTXPower() : 127;
     if (deviceEventQueue) {
       xQueueSend(deviceEventQueue, &event, 0);
     }
@@ -281,6 +303,17 @@ void addOrUpdateDevice(const DeviceEvent& event) {
         strncpy(devices[i].name, event.name, sizeof(devices[i].name) - 1);
         devices[i].name[sizeof(devices[i].name) - 1] = '\0';
       }
+      if (event.manufacturerData[0] != '\0') {
+        strncpy(devices[i].manufacturerData, event.manufacturerData, sizeof(devices[i].manufacturerData) - 1);
+        devices[i].manufacturerData[sizeof(devices[i].manufacturerData) - 1] = '\0';
+      }
+      if (event.serviceUuids[0] != '\0') {
+        strncpy(devices[i].serviceUuids, event.serviceUuids, sizeof(devices[i].serviceUuids) - 1);
+        devices[i].serviceUuids[sizeof(devices[i].serviceUuids) - 1] = '\0';
+      }
+      if (event.txPower != 127) {
+        devices[i].txPower = event.txPower;
+      }
       xSemaphoreGive(devicesMutex);
       return;
     }
@@ -297,6 +330,15 @@ void addOrUpdateDevice(const DeviceEvent& event) {
   } else {
     newDev.name[0] = '\0';
   }
+  if (event.manufacturerData[0] != '\0') {
+    strncpy(newDev.manufacturerData, event.manufacturerData, sizeof(newDev.manufacturerData) - 1);
+    newDev.manufacturerData[sizeof(newDev.manufacturerData) - 1] = '\0';
+  }
+  if (event.serviceUuids[0] != '\0') {
+    strncpy(newDev.serviceUuids, event.serviceUuids, sizeof(newDev.serviceUuids) - 1);
+    newDev.serviceUuids[sizeof(newDev.serviceUuids) - 1] = '\0';
+  }
+  newDev.txPower = event.txPower;
   newDev.lastSeen = millis();
 
   if (deviceCount >= MAX_DEVICE_COUNT) {
@@ -341,6 +383,20 @@ void sanitizeOutput(char* value) {
   }
 }
 
+void bytesToHex(const std::string& bytes, char* out, size_t outSize) {
+  if (!out || outSize == 0) {
+    return;
+  }
+  static const char* hex = "0123456789ABCDEF";
+  size_t writeIndex = 0;
+  for (size_t i = 0; i < bytes.length() && writeIndex + 2 < outSize; ++i) {
+    uint8_t value = static_cast<uint8_t>(bytes[i]);
+    out[writeIndex++] = hex[value >> 4];
+    out[writeIndex++] = hex[value & 0x0F];
+  }
+  out[writeIndex] = '\0';
+}
+
 void macToString(const uint8_t mac[6], char out[18]) {
   snprintf(out, 18, "%02X:%02X:%02X:%02X:%02X:%02X",
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
@@ -368,12 +424,16 @@ void sendData() {
 
   xSemaphoreGive(devicesMutex);
 
-  char line[128];
+  char line[320];
   for (size_t i = 0; i < snapshotCount; ++i) {
     const DeviceInfo& dev = snapshot[i];
     const char* typeStr = (dev.type == DEV_WIFI) ? "WIFI_PROBE" : "BLE";
-    int len = snprintf(line, sizeof(line), "%u|%s|%d|%s|%s\n",
-      NODE_ID, dev.mac, dev.rssi, typeStr, dev.name);
+    char txPower[8] = "";
+    if (dev.type == DEV_BLE && dev.txPower != 127) {
+      snprintf(txPower, sizeof(txPower), "%d", dev.txPower);
+    }
+    int len = snprintf(line, sizeof(line), "%u|%s|%d|%s|%s|%s|%s|%s|\n",
+      NODE_ID, dev.mac, dev.rssi, typeStr, dev.name, dev.manufacturerData, dev.serviceUuids, txPower);
     if (len > 0 && len < (int)sizeof(line)) {
       sendLine(line, (size_t)len);
     }
