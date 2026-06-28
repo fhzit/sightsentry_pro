@@ -186,6 +186,9 @@ class SentryFrame {
     if (!_macLike(mac)) return null;
     final rawType = typeText.toUpperCase();
     final type = rawType.contains('BLE') ? SignalType.ble : SignalType.wifi;
+    if (type == SignalType.ble) {
+      mac = canonicalBleDisplayMac(mac, manufacturerData);
+    }
     return SentryFrame(
       nodeId: nodeId,
       mac: mac,
@@ -210,6 +213,22 @@ String signalBucket(SignalType type, String rawType) {
 }
 
 String normalizeMac(String value) => value.trim().replaceAll('-', ':').toUpperCase();
+
+String canonicalBleDisplayMac(String mac, String manufacturerData) {
+  final hex = normalizeHex(manufacturerData);
+  if (hex.length >= 16 && hex.startsWith('C800')) {
+    final addressHex = hex.substring(hex.length - 12);
+    final bytes = <String>[];
+    for (var index = 0; index < addressHex.length; index += 2) {
+      bytes.add(addressHex.substring(index, index + 2));
+    }
+    final candidate = bytes.reversed.join(':').toUpperCase();
+    if (RegExp(r'^[0-9A-F]{2}(:[0-9A-F]{2}){5}$').hasMatch(candidate)) {
+      return candidate;
+    }
+  }
+  return mac;
+}
 
 String normalizeHex(String value) => value.trim().replaceAll(RegExp(r'[^0-9a-fA-F]'), '').toUpperCase();
 
@@ -244,7 +263,7 @@ DeviceCategory inferDeviceCategory({required String name, required String vendor
   if (_containsAny(haystack, const ['ipad', 'tablet', 'pad ', ' tab', 'galaxy tab', 'matepad', 'lenovo tab'])) {
     return DeviceCategory.tablet;
   }
-  if (_containsAny(haystack, const ['iphone', 'phone', 'pixel', 'galaxy', 'huawei', 'honor', 'xiaomi', 'redmi', 'oppo', 'oneplus', 'vivo', 'realme', 'motorola', 'nokia', 'sony', 'zte', 'meizu', 'nothing'])) {
+  if (_containsAny(haystack, const ['iphone', 'phone', 'pixel', 'galaxy', 'huawei', 'honor', 'xiaomi', 'redmi', 'oppo', 'oneplus', 'vivo', 'realme', 'motorola', 'nokia', 'sony', 'zte', 'meizu', 'nothing', 'gelo inc'])) {
     return DeviceCategory.phone;
   }
   if (type == SignalType.wifi && _containsAny(haystack, const ['apple, inc.', 'samsung electronics', 'google', 'lg electronics'])) {

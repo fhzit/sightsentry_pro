@@ -4,6 +4,7 @@ const Map<int, String> bleCompanyIds = {
   0x004C: 'Apple, Inc.',
   0x0059: 'Nordic Semiconductor ASA',
   0x0075: 'Samsung Electronics Co. Ltd.',
+  0x00C8: 'GeLo Inc',
   0x00E0: 'Google',
   0x00E1: 'SEIKO EPSON CORPORATION',
   0x0131: 'Cypress Semiconductor',
