@@ -3,7 +3,6 @@
 #include <BLEServer.h>
 #include <BLE2902.h>
 #include <cstring>
-#include <string>
 
 #define NODE_ID 1
 #define SCAN_INTERVAL_MS 1000
@@ -69,7 +68,7 @@ void filterDevices();
 void startBLEServer();
 void macToString(const uint8_t mac[6], char out[18]);
 void sanitizeOutput(char* value);
-void bytesToHex(const std::string& bytes, char* out, size_t outSize);
+void bytesToHex(const String& bytes, char* out, size_t outSize);
 bool parseWifiManagementFrame(const uint8_t* payload, size_t payloadLength, DeviceEvent& event);
 bool parseWifiSsid(const uint8_t* taggedParams, size_t taggedParamsLength, char* out, size_t outSize);
 void handleModeButton();
@@ -99,7 +98,7 @@ class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
       event.manufacturerData[0] = '\0';
     }
     if (advertisedDevice.haveServiceUUID()) {
-      std::string serviceUuid = advertisedDevice.getServiceUUID().toString();
+      String serviceUuid = advertisedDevice.getServiceUUID().toString();
       strncpy(event.serviceUuids, serviceUuid.c_str(), sizeof(event.serviceUuids) - 1);
       event.serviceUuids[sizeof(event.serviceUuids) - 1] = '\0';
       sanitizeOutput(event.serviceUuids);
@@ -431,7 +430,7 @@ void sanitizeOutput(char* value) {
   }
 }
 
-void bytesToHex(const std::string& bytes, char* out, size_t outSize) {
+void bytesToHex(const String& bytes, char* out, size_t outSize) {
   if (!out || outSize == 0) {
     return;
   }
