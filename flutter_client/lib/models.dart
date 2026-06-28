@@ -85,7 +85,12 @@ class SentryDevice {
   bool get usesLegacyWifiType => type == SignalType.wifi && !rawType.toUpperCase().contains('PROBE') && !isWifiAp;
   DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type, rawType: rawType);
   String get categoryLabel => deviceCategoryLabel(category);
-  bool get isPersonalDevice => category != DeviceCategory.other;
+  bool get isPersonalDevice {
+    return category == DeviceCategory.phone ||
+        category == DeviceCategory.tablet ||
+        category == DeviceCategory.watch ||
+        category == DeviceCategory.headphone;
+  }
   double get distanceMeters => estimateDistanceMeters(rssi);
   DistanceBand get distanceBand => inferDistanceBand(rssi);
   String get distanceBandLabel => distanceBand.label;
