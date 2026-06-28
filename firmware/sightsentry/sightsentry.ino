@@ -19,7 +19,8 @@
 #define CHARACTERISTIC_UUID "6e400003-b5a3-f393-e0a9-e50e24dcca9e"
 
 enum DeviceType {
-  DEV_WIFI,
+  DEV_WIFI_PROBE,
+  DEV_WIFI_AP,
   DEV_BLE,
 };
 
@@ -69,7 +70,8 @@ void startBLEServer();
 void macToString(const uint8_t mac[6], char out[18]);
 void sanitizeOutput(char* value);
 void bytesToHex(const std::string& bytes, char* out, size_t outSize);
-bool parseWifiProbeRequestSourceMac(const uint8_t* payload, uint8_t out[6]);
+bool parseWifiManagementFrame(const uint8_t* payload, size_t payloadLength, DeviceEvent& event);
+bool parseWifiSsid(const uint8_t* taggedParams, size_t taggedParamsLength, char* out, size_t outSize);
 void handleModeButton();
 
 class MyAdvertisedDeviceCallbacks : public BLEAdvertisedDeviceCallbacks {
@@ -163,13 +165,11 @@ void setup() {
     const uint8_t* payload = pkt->payload;
 
     DeviceEvent event = {};
-    if (!parseWifiProbeRequestSourceMac(payload, event.mac)) {
+    if (!parseWifiManagementFrame(payload, ctrl.sig_len, event)) {
       return;
     }
 
     event.rssi = ctrl.rssi;
-    event.type = DEV_WIFI;
-    event.name[0] = '\0';
     if (deviceEventQueue) {
       BaseType_t xHigherPriorityTaskWoken = pdFALSE;
       xQueueSendFromISR(deviceEventQueue, &event, &xHigherPriorityTaskWoken);
@@ -358,21 +358,69 @@ void addOrUpdateDevice(const DeviceEvent& event) {
   xSemaphoreGive(devicesMutex);
 }
 
-bool parseWifiProbeRequestSourceMac(const uint8_t* payload, uint8_t out[6]) {
-  if (!payload) {
+bool parseWifiManagementFrame(const uint8_t* payload, size_t payloadLength, DeviceEvent& event) {
+  if (!payload || payloadLength < 24) {
     return false;
   }
 
   uint16_t frameCtrl = payload[0] | (payload[1] << 8);
   uint8_t type = (frameCtrl >> 2) & 0x03;
   uint8_t subtype = (frameCtrl >> 4) & 0x0F;
-  if (type != 0 || subtype != 4) {
+  if (type != 0) {
     return false;
   }
 
-  // Probe Request source address is Address 2 in the 802.11 MAC header.
-  memcpy(out, payload + 10, 6);
-  return true;
+  if (subtype == 4) {
+    // Probe Request source address is Address 2 in the 802.11 MAC header.
+    memcpy(event.mac, payload + 10, 6);
+    event.type = DEV_WIFI_PROBE;
+    event.name[0] = '\0';
+    return true;
+  }
+
+  if (subtype == 8 || subtype == 5) {
+    if (payloadLength < 38) {
+      return false;
+    }
+    // Beacon and Probe Response expose the AP BSSID at Address 3.
+    memcpy(event.mac, payload + 16, 6);
+    event.type = DEV_WIFI_AP;
+    event.name[0] = '\0';
+    parseWifiSsid(payload + 36, payloadLength - 36, event.name, sizeof(event.name));
+    sanitizeOutput(event.name);
+    return true;
+  }
+
+  return false;
+}
+
+bool parseWifiSsid(const uint8_t* taggedParams, size_t taggedParamsLength, char* out, size_t outSize) {
+  if (!taggedParams || !out || outSize == 0) {
+    return false;
+  }
+
+  out[0] = '\0';
+  size_t index = 0;
+  while (index + 2 <= taggedParamsLength) {
+    uint8_t tagId = taggedParams[index];
+    uint8_t tagLength = taggedParams[index + 1];
+    index += 2;
+    if (index + tagLength > taggedParamsLength) {
+      return false;
+    }
+    if (tagId == 0) {
+      size_t copyLength = tagLength;
+      if (copyLength >= outSize) {
+        copyLength = outSize - 1;
+      }
+      memcpy(out, taggedParams + index, copyLength);
+      out[copyLength] = '\0';
+      return copyLength > 0;
+    }
+    index += tagLength;
+  }
+
+  return false;
 }
 
 void sanitizeOutput(char* value) {
@@ -427,7 +475,12 @@ void sendData() {
   char line[320];
   for (size_t i = 0; i < snapshotCount; ++i) {
     const DeviceInfo& dev = snapshot[i];
-    const char* typeStr = (dev.type == DEV_WIFI) ? "WIFI_PROBE" : "BLE";
+    const char* typeStr = "BLE";
+    if (dev.type == DEV_WIFI_PROBE) {
+      typeStr = "WIFI_PROBE";
+    } else if (dev.type == DEV_WIFI_AP) {
+      typeStr = "WIFI_AP";
+    }
     char txPower[8] = "";
     if (dev.type == DEV_BLE && dev.txPower != 127) {
       snprintf(txPower, sizeof(txPower), "%d", dev.txPower);

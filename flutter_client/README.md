@@ -7,7 +7,7 @@ Flutter rewrite of the Android client for SightSentry Pro.
 - Android 9+ support (`minSdkVersion 28`)
 - ESP32C6 node connection over USB OTG serial at 115200 baud
 - BLE UART connection using Nordic UART compatible UUIDs
-- Parses firmware frames: `nodeId|mac|rssi|type|name`
+- Parses firmware frames: `nodeId|mac|rssi|type|name`, including `WIFI_PROBE`, `WIFI_AP`, and `BLE`
 - WiFiman-inspired dark device list and detail pages
 - Device detail page with MAC, vendor, signal strength, Bluetooth/WiFi type, and estimated distance
 - Built-in app icon: dark radar rings, green scan beam, pink target dot

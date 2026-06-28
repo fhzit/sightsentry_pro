@@ -5,7 +5,7 @@ import 'oui_vendors.dart';
 
 enum SignalType { wifi, ble }
 
-enum DeviceCategory { phone, tablet, watch, headphone, other }
+enum DeviceCategory { phone, tablet, watch, headphone, accessPoint, other }
 
 enum IdentitySource { broadcastName, bleManufacturerData, macOui, unknown }
 
@@ -53,7 +53,7 @@ class SentryDevice {
   final DateTime lastSeen;
   final Map<int, int> nodeRssi;
 
-  String get id => '${type.name}:$mac';
+  String get id => '${type.name}:${signalBucket(type, rawType)}:$mac';
   String get title => name.isNotEmpty ? name : vendor;
   String? get bleVendor => identifyBleManufacturer(manufacturerData);
   String get ouiVendor => identifyVendor(mac, fallback: '');
@@ -72,11 +72,18 @@ class SentryDevice {
   }
 
   String get identitySourceLabel => identitySource.label;
-  String get typeLabel => type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Probe Request';
-  String get shortTypeLabel => type == SignalType.ble ? 'LE' : 'WiFi';
-  String get sourceLabel => type == SignalType.ble ? 'BLE 广播' : 'Probe Request';
-  bool get usesLegacyWifiType => type == SignalType.wifi && !rawType.toUpperCase().contains('PROBE');
-  DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type);
+  String get typeLabel {
+    if (type == SignalType.ble) return 'Bluetooth LE';
+    return isWifiAp ? 'WiFi AP / 路由器' : 'WiFi Probe Request';
+  }
+  String get shortTypeLabel => type == SignalType.ble ? 'LE' : (isWifiAp ? 'AP' : 'WiFi');
+  String get sourceLabel {
+    if (type == SignalType.ble) return 'BLE 广播';
+    return isWifiAp ? 'AP Beacon / Probe Response' : 'Probe Request';
+  }
+  bool get isWifiAp => type == SignalType.wifi && rawType.toUpperCase().contains('AP');
+  bool get usesLegacyWifiType => type == SignalType.wifi && !rawType.toUpperCase().contains('PROBE') && !isWifiAp;
+  DeviceCategory get category => inferDeviceCategory(name: name, vendor: vendor, type: type, rawType: rawType);
   String get categoryLabel => deviceCategoryLabel(category);
   bool get isPersonalDevice => category != DeviceCategory.other;
   double get distanceMeters => estimateDistanceMeters(rssi);
@@ -135,7 +142,7 @@ class SentryFrame {
   final String serviceUuids;
   final int? txPower;
 
-  String get id => '${type.name}:$mac';
+  String get id => '${type.name}:${signalBucket(type, rawType)}:$mac';
 
   static SentryFrame? parse(String line) {
     final trimmed = line.trim();
@@ -192,6 +199,11 @@ class SentryFrame {
   }
 }
 
+String signalBucket(SignalType type, String rawType) {
+  if (type == SignalType.ble) return 'ble';
+  return rawType.toUpperCase().contains('AP') ? 'ap' : 'probe';
+}
+
 String normalizeMac(String value) => value.trim().replaceAll('-', ':').toUpperCase();
 
 String normalizeHex(String value) => value.trim().replaceAll(RegExp(r'[^0-9a-fA-F]'), '').toUpperCase();
@@ -213,7 +225,10 @@ String? identifyBleManufacturer(String manufacturerData) {
   return bleCompanyIds[companyId];
 }
 
-DeviceCategory inferDeviceCategory({required String name, required String vendor, required SignalType type}) {
+DeviceCategory inferDeviceCategory({required String name, required String vendor, required SignalType type, String rawType = ''}) {
+  if (type == SignalType.wifi && rawType.toUpperCase().contains('AP')) {
+    return DeviceCategory.accessPoint;
+  }
   final haystack = '$name $vendor'.toLowerCase();
   if (_containsAny(haystack, const ['watch', 'band', 'bracelet', 'amazfit', 'garmin', 'fitbit'])) {
     return DeviceCategory.watch;
@@ -245,6 +260,8 @@ String deviceCategoryLabel(DeviceCategory category) {
       return '手表';
     case DeviceCategory.headphone:
       return '耳机';
+    case DeviceCategory.accessPoint:
+      return 'AP/路由器';
     case DeviceCategory.other:
       return '其他';
   }

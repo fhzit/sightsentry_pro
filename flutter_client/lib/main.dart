@@ -475,7 +475,7 @@ class DeviceDetailPage extends StatelessWidget {
               _InfoRow('估算距离', formatDistance(device.distanceMeters)),
               _InfoRow('平滑信号', '${device.rssi} dBm'),
               _InfoRow('最近信号', '${device.lastRssi} dBm'),
-              _InfoRow(device.type == SignalType.ble ? '蓝牙类型' : '无线类型', device.type == SignalType.ble ? 'Bluetooth LE' : 'WiFi Probe Request'),
+              _InfoRow(device.type == SignalType.ble ? '蓝牙类型' : '无线类型', device.typeLabel),
             ]),
             if (device.type == SignalType.ble && device.hasBleMetadata) ...[
               const SizedBox(height: 16),
